@@ -62,7 +62,7 @@ namespace CnC {
         COMPUTE_ON_LOCAL       = -2,  ///< let tuner::compute_on return COMPUTE_ON_LOCAL if the step should be executed locally
         COMPUTE_ON_ROUND_ROBIN = -3,  ///< let tuner::compute_on return COMPUTE_ON_ROUND_ROBIN to let the scheduler distribute it in a round-robin fashion
         COMPUTE_ON_ALL         = -4,  ///< let tuner::compute_on return COMPUTE_ON_ALL if the step should be executed on all processes, as well as locally
-        COMPUTE_ON_ALL_OTHERS  = -5,  ///< let tuner::compute_on return COMPUTE_ON_ALL_OTHERS if the step should be executed on all processes, but not locally    
+        COMPUTE_ON_ALL_OTHERS  = -5,  ///< let tuner::compute_on return COMPUTE_ON_ALL_OTHERS if the step should be executed on all processes, but not locally
         PRODUCER_UNKNOWN    = -6,  ///< producer process of dependent item is unknown
         PRODUCER_LOCAL      = -7,  ///< producer process of dependent item is local process
         CONSUMER_UNKNOWN    = -8,  ///< consumer process of given item is unkown
@@ -178,7 +178,7 @@ namespace CnC {
         {
             return false;
         }
-                  
+
         /// \brief Tell the scheduler the preferred thread for executing given step
         ///
         /// Not all schedulers might actually evaluate this call (see \ref scheduler);
@@ -241,27 +241,28 @@ namespace CnC {
             return false;
         }
 
-        template< typename Tag, typename Arg, typename Step >
-        void tag_ready( const Tag & tag, Arg & arg, Step * step) {
+        struct tile_manager {
+            template< typename Tag, typename Arg, typename Step >
+            void tag_ready( const Tag & tag, Arg & arg, const Step * step)  {
+                // no-op default
+            }
 
-            // no-op default
+            template< typename Tag, typename Arg >
+            int super_tile( const Tag & tag, Arg & arg) const {
+                return -1;
+            }
 
-        }
+            template< typename Tag, typename Arg >
+            int is_super_tile_ready( const Tag & tag, Arg & arg) const {
+                CNC_ASSERT(false);
+            }
 
-        template< typename Tag, typename Arg >
-        int super_tile( const Tag & tag, Arg & arg) const {
-            return -1;
-        }
+            template < typename Tag, typename Arg >
+            void execute_super_tile( const Tag & tag, Arg & arg) const {
+                CNC_ASSERT(false);
+            }
+        };
 
-        template< typename Tag, typename Arg >
-        int is_super_tile_ready( const Tag & tag, Arg & arg) const {
-            CNC_ASSERT(false); 
-        }
-
-        template < typename Tag, typename Arg >
-        void execute_super_tile( const Tag & tag, Arg & arg) const {
-            CNC_ASSERT(false);
-        }
     };
 
     // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -480,7 +481,7 @@ namespace CnC {
         {
             table_type( const Coll * c, size_t sz = 0 ) : TT< Tag, Item, Coll >( c, sz ) {}
         };
-        
+
         /// \brief Initialize the internal storage.
         ///
         /// Can be used to configure the storage table.
@@ -598,7 +599,7 @@ namespace CnC {
     };
 
     // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
+
     /// Use this if your tag-collection should preserve tags (memoization)
     /// \note Memoization doesn't work with ranges (yet)
     template< typename Tag, typename H = cnc_hash< Tag >, typename E = cnc_equal< Tag > >
