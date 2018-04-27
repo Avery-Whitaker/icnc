@@ -77,7 +77,7 @@ namespace CnC {
 
             /// the callback type for writing re-usable graphs (CnC::graph)
             typedef struct _callback {
-                virtual void on_put( const Tag & ) = 0;
+                virtual bool on_put( const Tag & ) = 0;
                 virtual ~_callback() {}; 
             } callback_type;
             /// register a callback, called whe a tag is put
@@ -250,6 +250,18 @@ namespace CnC {
                         oss << " mask " << mask << " " << _lmask << " _found " << _found;
                     }
                 }
+
+                bool quit = false;
+                if( _found == 0 ) {
+                    for( typename callback_vec::iterator i = m_onPuts.begin(); i != m_onPuts.end(); ++i ) {
+                        quit = quit || (*i)->on_put( user_tag );
+                    }
+                }
+                
+                if (quit) {
+                    return;
+                }
+
                 for( typename PrescribedStepCollections_t::const_iterator ci = this->m_prescribedStepCollections.begin();
                      ci != this->m_prescribedStepCollections.end();
                      ++ci ) {
@@ -261,11 +273,6 @@ namespace CnC {
                         _stepLauncher->create_step_instance( user_tag, get_context(), mask == -1 );
                         
                     } else if( trace_level() > 0 ) { Speaker oss; oss << "\t{" << _stepLauncher->id() << " memoized}"; }
-                }
-                if( _found == 0 ) {
-                    for( typename callback_vec::iterator i = m_onPuts.begin(); i != m_onPuts.end(); ++i ) {
-                        (*i)->on_put( user_tag );
-                    }
                 }
             } else if ( trace_level() > 0 ) {
                 Speaker oss;
