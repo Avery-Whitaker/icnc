@@ -240,26 +240,6 @@ namespace CnC {
         {
             return false;
         }
-
-        template< typename Tag, typename Arg >
-        void tag_ready( const Tag & tag, Arg & arg) {
-        
-        }
-
-        template< typename Tag, typename Arg >
-        int super_tile( const Tag & tag, Arg & arg) const {
-            return -1;
-        }
-
-        template< typename Tag, typename Arg >
-        int is_super_tile_ready( const Tag & tag, Arg & arg) const {
-            CNC_ASSERT(false); 
-        }
-
-        template < typename Tag, typename Arg >
-        void execute_super_tile( const Tag & tag, Arg & arg) const {
-            CNC_ASSERT(false);
-        }
     };
 
     // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
