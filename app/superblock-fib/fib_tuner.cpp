@@ -51,27 +51,27 @@ struct fib_tuner : public CnC::step_tuner<>
     template< class dependency_consumer >
     void depends( const int & tag, fib_context & c, dependency_consumer & dC ) const;
 
-    void tag_ready(const int & tag, fib_context &ctx, const void *step)
+    void tag_ready(const int tag, fib_context &ctx, void *step)
     {
         completed = tag;
     }
 
-    int super_tile(const int & tag, fib_context &ctx) const
+    int super_tile(const int tag, fib_context &ctx) const
     {
         return tag/SUPERBLOCK_SIZE;
     }
 
 
-    int is_super_tile_ready(const int & tag, fib_context &ctx) const
+    int is_super_tile_ready(const int tag, fib_context &ctx) const
     {
         return tag - SUPERBLOCK_SIZE > completed;
     }
 
-    void execute_super_tile(const int & tag, fib_context &ctx) const
+    void execute_super_tile(const int tag, fib_context &ctx) const
     {
-        fib_type mem[SUPERBLOCK_SIZE + 3];
-         ctx.m_fibs.get(tag - 2, mem[0]);
-         ctx.m_fibs.get(tag - 1, mem[1]);
+        int mem[SUPERBLOCK_SIZE + 3];
+        mem[0] = ctx.m_fibs.get(tag - 2);
+        mem[1] = ctx.m_fibs.get(tag - 1);
 
         for(int i = 2; i < SUPERBLOCK_SIZE + 2; i++)
             mem[i] = mem[i-1] + mem[i-2];

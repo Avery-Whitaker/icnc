@@ -197,7 +197,6 @@ namespace CnC {
         //typename step_launcher< Tag, Step, Arg, TagTuner, StepTuner >::step_instance_type * 
         step_launcher< Tag, Step, Arg, TagTuner, StepTuner >::create_step_instance( const Tag & tag, context_base & ctxt, bool compute_on ) const
         {
-            m_stepColl.m_tuner.tag_ready(tag, m_arg, &m_stepColl);
             step_instance_type * _si = new step_instance_type( tag, ctxt, this );
             if( m_scheduler.prepare( _si, compute_on ) ) return _si;
             delete _si;
