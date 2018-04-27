@@ -326,7 +326,8 @@ namespace CnC {
                 theDistributor->m_sync.pop( _tmp );
             }
             int _res = theDistributor->m_nMsgsRecvd.fetch_and_store( 0 ); //_ret;
-            // std::cerr << "\t." << _res << std::endl;
+            //            std::cerr << "\t." << _res << std::endl << std::flush;
+            //            std::cerr << ".\n" << std::flush;
             return _res;// - (2*_n + 1);
         }
 
