@@ -34,9 +34,6 @@
 // The fib numbers as calculated by the compute step
 [fib_type m_fibs <fib_type>];
 
-// Step tunning
-(fib_step) tuner=fib_tuner;
-
 // Step prescription
 // For each non-negative integer, there is one step 
 <m_tags> ::  (fib_step);
@@ -48,5 +45,5 @@
 // Input from the environment: initialize all tags
 env -> <m_tags>; 
 
-// Output to the environment is the collection of the prime numbers
+// Output to the environment is the collection of the Fibonacci numbers
 [m_fibs] -> env;

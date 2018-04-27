@@ -1,6 +1,6 @@
 # see parent $CNCROOT/samples/CMakeLists.txt
 
-set(myname fib_tuner)
+set(myname fib)
 
 add_executable(${myname} ${myname}.cpp)
 target_link_libraries(${myname} ${NEEDED_LIBS})

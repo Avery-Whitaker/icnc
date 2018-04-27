@@ -12,16 +12,16 @@ $(error CNCROOT is not set)
 endif
 
 #CXX=icpc
-OPT := -pthread $(OPTS) -O3 -std=c++11 -g
+OPT := -pthread $(OPTS) -O3 -std=c++11
 
-APPNAME = fib_tuner
+APPNAME = fib
 
 TARGETS   := $(APPNAME)
 DEST_OBJS := $(TARGETS:=.o)
 CNCFILE   := $(APPNAME).cnc
 HINTSFILE := $(APPNAME)_codinghints.txt
 #GEN_HEADER=$(CNCFILE:.cnc=.h)
-HEADERS  := fib.h
+HEADERS  := $(APPNAME).h
 
 all:  $(TARGETS)
 

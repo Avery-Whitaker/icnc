@@ -49,12 +49,12 @@ struct super_fib_step
 // The context class
 struct fib_context : public CnC::context< fib_context >
 {
-    // the step collection for the instances of the compute-kernel
+    // step collections
     CnC::step_collection< fib_step > m_steps;
     // Item collections
     CnC::item_collection< int, fib_type > m_fibs;
     // Tag collections
-    CnC::tag_collection< int >            m_tags;
+    CnC::tag_collection< int > m_tags;
 
     superblock_manager *m_super_manager;
 
@@ -76,21 +76,22 @@ struct superblock_manager : CnC::tag_collection< int >::callback_type
     virtual bool on_put( const int & tag) override {
         std::cout << "on put tag" << tag << std::endl;
         m_stags.put(tag);
-        return true;
+        return false;
     }
 };
 
+
 int super_fib_step::execute(const int tag, fib_context &ctx) const
 {
- /*  fib_type mem[SUPERBLOCK_SIZE + 3];
-    ctx.m_fibs.get(tag + 2, mem[0]);
-    ctx.m_fibs.get(tag + 1, mem[1]);
+    /*  fib_type mem[SUPERBLOCK_SIZE + 3];
+       ctx.m_fibs.get(tag + 2, mem[0]);
+       ctx.m_fibs.get(tag + 1, mem[1]);
 
-    for(int i = 2; i < SUPERBLOCK_SIZE + 2; i++)
-        mem[i] = mem[i-1] + mem[i-2];
+       for(int i = 2; i < SUPERBLOCK_SIZE + 2; i++)
+           mem[i] = mem[i-1] + mem[i-2];
 
-    ctx.m_fibs.put(tag - SUPERBLOCK_SIZE, mem[SUPERBLOCK_SIZE + 1]);
-*/
+       ctx.m_fibs.put(tag - SUPERBLOCK_SIZE, mem[SUPERBLOCK_SIZE + 1]);
+   */
     std::cout << "superblock: " << tag << std::endl;
     return CnC::CNC_Success;
 }
