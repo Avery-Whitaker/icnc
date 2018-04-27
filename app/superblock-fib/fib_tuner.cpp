@@ -39,9 +39,7 @@ typedef unsigned long long fib_type;
 
 #include "cnc/cnc.h"
 
-struct fib_tuner;
-
-#include "fib.h"
+struct fib_context;
 
 int completed = 0;
 
@@ -51,7 +49,7 @@ struct fib_tuner : public CnC::step_tuner<>
     template< class dependency_consumer >
     void depends( const int & tag, fib_context & c, dependency_consumer & dC ) const;
 
-    void tag_ready(const int tag, fib_context &ctx, void *step)
+    void tag_ready(const int tag, fib_context &ctx)
     {
         completed = tag;
     }
@@ -79,6 +77,8 @@ struct fib_tuner : public CnC::step_tuner<>
         ctx.m_fibs.put(tag + SUPERBLOCK_SIZE, mem[SUPERBLOCK_SIZE + 1]);
     }
 };
+
+#include "fib.h"
 
 template< class dependency_consumer >
 void fib_tuner::depends( const int & tag, fib_context & c, dependency_consumer & dC ) const

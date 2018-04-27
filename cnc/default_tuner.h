@@ -241,11 +241,9 @@ namespace CnC {
             return false;
         }
 
-        template< typename Tag, typename Arg, typename Step >
-        void tag_ready( const Tag & tag, Arg & arg, Step * step) {
-
-            // no-op default
-
+        template< typename Tag, typename Arg >
+        void tag_ready( const Tag & tag, Arg & arg) {
+        
         }
 
         template< typename Tag, typename Arg >
