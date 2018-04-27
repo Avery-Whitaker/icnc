@@ -251,16 +251,19 @@ namespace CnC {
                     }
                 }
 
-                bool quit = false;
                 if( _found == 0 ) {
+
+                    bool quit = false;
+
                     for( typename callback_vec::iterator i = m_onPuts.begin(); i != m_onPuts.end(); ++i ) {
                         quit = quit || (*i)->on_put( user_tag );
                     }
+
+                    if (quit) {
+                        return;
+                    }
                 }
-                
-                if (quit) {
-                    return;
-                }
+
 
                 for( typename PrescribedStepCollections_t::const_iterator ci = this->m_prescribedStepCollections.begin();
                      ci != this->m_prescribedStepCollections.end();

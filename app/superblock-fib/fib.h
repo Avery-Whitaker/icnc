@@ -32,6 +32,7 @@
 
 // Forward declaration of the context class (also known as graph)
 struct fib_context;
+struct superblock_manager;
 
 // The step classes
 
@@ -40,33 +41,77 @@ struct fib_step
     int execute( const int & t, fib_context & c ) const;
 };
 
+struct super_fib_step
+{
+    int execute(const int tag, fib_context &ctx) const;
+};
+
 // The context class
 struct fib_context : public CnC::context< fib_context >
 {
     // the step collection for the instances of the compute-kernel
-    CnC::step_collection< fib_step, fib_tuner > m_steps;
+    CnC::step_collection< fib_step > m_steps;
     // Item collections
     CnC::item_collection< int, fib_type > m_fibs;
     // Tag collections
     CnC::tag_collection< int >            m_tags;
 
+    superblock_manager *m_super_manager;
+
     // The context class constructor
-    fib_context()
-        : CnC::context< fib_context >(),
-          // Initialize each step collection
-          m_steps( *this, "fib_step" ),
-          // Initialize each tag collection
-          m_fibs( *this, "fibs" ),
-          // Initialize each item collection
-          m_tags( *this, "tags" )
-    {
-        // prescribe compute steps with this (context) as argument
-        m_tags.prescribes( m_steps, *this );
-        // step consumes m_fibs
-        m_steps.consumes( m_fibs );
-        // step also produces m_fibs
-        m_steps.produces( m_fibs );
+    fib_context();
+};
+
+struct superblock_manager : CnC::tag_collection< int >::callback_type
+{
+    CnC::step_collection<super_fib_step> m_sstep;
+    CnC::tag_collection<int> m_stags;
+
+    superblock_manager(fib_context &context) : m_sstep(context, "sstep"), m_stags(context, "stags") {
+        m_stags.prescribes(m_sstep, context);
+        m_sstep.consumes(context.m_fibs);
+        m_sstep.produces(context.m_fibs);
+    }
+
+    virtual bool on_put( const int & tag) override {
+        std::cout << "on put tag" << tag << std::endl;
+        m_stags.put(tag);
+        return true;
     }
 };
+
+int super_fib_step::execute(const int tag, fib_context &ctx) const
+{
+ /*  fib_type mem[SUPERBLOCK_SIZE + 3];
+    ctx.m_fibs.get(tag + 2, mem[0]);
+    ctx.m_fibs.get(tag + 1, mem[1]);
+
+    for(int i = 2; i < SUPERBLOCK_SIZE + 2; i++)
+        mem[i] = mem[i-1] + mem[i-2];
+
+    ctx.m_fibs.put(tag - SUPERBLOCK_SIZE, mem[SUPERBLOCK_SIZE + 1]);
+*/
+    std::cout << "superblock: " << tag << std::endl;
+    return CnC::CNC_Success;
+}
+
+fib_context::fib_context()
+        : CnC::context< fib_context >(),
+        // Initialize each step collection
+          m_steps( *this, "fib_step" ),
+        // Initialize each tag collection
+          m_fibs( *this, "fibs" ),
+        // Initialize each item collection
+          m_tags( *this, "tags" )
+{
+    m_super_manager = new superblock_manager(*this);
+    m_tags.on_put(m_super_manager);
+    // prescribe compute steps with this (context) as argument
+    m_tags.prescribes( m_steps, *this );
+    // step consumes m_fibs
+    m_steps.consumes( m_fibs );
+    // step also produces m_fibs
+    m_steps.produces( m_fibs );
+}
 
 #endif // fib_H_ALREADY_INCLUDED
