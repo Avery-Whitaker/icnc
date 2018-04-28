@@ -3,7 +3,7 @@
 //
 
 #include <cnc/cnc.h>
-#define CHUNK_SIZE 7
+#define CHUNK_SIZE 2
 
 struct superblock_manager;
 
@@ -46,38 +46,12 @@ struct SmithWatermanContext;
 
 struct SmithWatermanStep {
     int execute(const Tag_t &t, SmithWatermanContext &ctx) const;
-    void put(SmithWatermanContext &ctx, int i, int j) const ;
 };
 
-struct superblock_manager : CnC::tag_collection< int >::callback_type
-{
-    CnC::step_collection<SmithWatermanStep> m_sstep;
-    CnC::tag_collection<int> m_stags;
-    SmithWatermanContext &context;
-
-    superblock_manager(SmithWatermanContext &context) : context(context), m_sstep(context, "sstep"), m_stags(context, "stags") {
-        m_stags.prescribes(m_sstep, context);
-        m_sstep.consumes(context.m_fibs);
-        m_sstep.produces(context.m_fibs);
-    }
-
-    virtual bool on_put( const int & tag) override {
-        if(tag >= CHUNK_SIZE && tag < context.n - context.n % CHUNK_SIZE) {
-            if( tag % CHUNK_SIZE == 0) {
-                // std::cout << "do chunk tag" << tag << std::endl;
-                m_stags.put(tag);
-            }
-            //std::cout << "dont exec tag" << tag << std::endl;
-            return true;
-        }
-        // std::cout << "do exec tag" << tag << std::endl;
-        return false;
-    }
-};
 
 struct SuperSmithWatermanStep
 {
-    int execute(const int tag, fib_context &ctx) const;
+    int execute(const Tag_t tag, SmithWatermanContext &ctx) const;
 };
 
 
@@ -94,26 +68,61 @@ struct SmithWatermanContext : public CnC::context<SmithWatermanContext> {
 
     superblock_manager *m_super_manager;
 
-    SmithWatermanContext(std::string a, std::string b)
-            : CnC::context<SmithWatermanContext>(), steps(*this), items(*this), tags(*this), a(a), b(b) {
-
-        m_super_manager = new superblock_manager(*this);
-        tags.on_put(m_super_manager);
-
-        tags.prescribes(steps, *this);
-        steps.consumes(items);
-        steps.produces(items);
-
-        n = a.length();
-        m = b.length();
-
-    }
+    SmithWatermanContext(std::string a, std::string b);
 };
 
 
-int SmithWatermanStep::execute(const Tag_t &t, SmithWatermanContext &ctx) const {
-    int const &i = t.first;
-    int const &j = t.second;
+struct superblock_manager : CnC::tag_collection< Tag_t >::callback_type
+{
+    CnC::step_collection<SuperSmithWatermanStep> m_sstep;
+    CnC::tag_collection<Tag_t> m_stags;
+    SmithWatermanContext &context;
+
+    superblock_manager(SmithWatermanContext &context) : context(context), m_sstep(context), m_stags(context) {
+        m_stags.prescribes(m_sstep, context);
+        m_sstep.consumes(context.items);
+        m_sstep.produces(context.items);
+    }
+
+    virtual bool on_put( const Tag_t & tag) override {
+        if(tag.first >= CHUNK_SIZE && tag.first < context.n - context.n % CHUNK_SIZE
+                && tag.second >= CHUNK_SIZE && tag.second < context.m - context.m % CHUNK_SIZE) {
+
+            if( tag.first % CHUNK_SIZE == 0 &&
+                    tag.second % CHUNK_SIZE == 0) {
+                 std::cout << "do chunk tag" << "(" << tag.first << ", " << tag.second << ")" << std::endl;
+                m_stags.put(tag);
+            }
+             std::cout << "dont exec tag" << "(" << tag.first << ", " << tag.second << ")" << std::endl;
+            return true;
+        }
+         std::cout << "do exec tag "  << "(" << tag.first << ", " << tag.second << ")" <<  std::endl;
+        return false;
+    }
+};
+
+SmithWatermanContext::SmithWatermanContext(std::string a, std::string b)
+: CnC::context<SmithWatermanContext>(), steps(*this), items(*this), tags(*this), a(a), b(b) {
+
+    m_super_manager = new superblock_manager(*this);
+    tags.on_put(m_super_manager);
+
+    tags.prescribes(steps, *this);
+    steps.consumes(items);
+    steps.produces(items);
+
+    n = a.length();
+    m = b.length();
+
+}
+
+void put(SmithWatermanContext &ctx, int i, int j) {
+    if (i <= ctx.n && j <= ctx.m) {
+        ctx.tags.put(std::make_pair(i, j));
+    }
+}
+
+int do_step(int i, int j, SmithWatermanContext &ctx) {
 
     int up, di, le;
 
@@ -140,36 +149,83 @@ int SmithWatermanStep::execute(const Tag_t &t, SmithWatermanContext &ctx) const 
 
     put(ctx, i + 1, j + 1);
 
+}
+
+int SmithWatermanStep::execute(const Tag_t &t, SmithWatermanContext &ctx) const {
+    int const &i = t.first;
+    int const &j = t.second;
+
+    do_step(i,j, ctx);
+
     return CnC::CNC_Success;
 }
 
-int SuperSmithWatermanStep::execute(const int tag, fib_context &ctx) const
+int SuperSmithWatermanStep::execute(const Tag_t tag, SmithWatermanContext &ctx) const
 {
-    /* fib_type mem[CHUNK_SIZE + 3];
-     ctx.m_fibs.get(tag - 2, mem[0]);
-     ctx.m_fibs.get(tag - 1, mem[1]);
 
-     for(int i = 2; i < CHUNK_SIZE + 2; i++)
-         mem[i] = mem[i-1] + mem[i-2];
+    /* Simple version
 
-     ctx.m_fibs.put(tag + CHUNK_SIZE - 2, mem[CHUNK_SIZE]);
-     ctx.m_fibs.put(tag + CHUNK_SIZE - 1, mem[CHUNK_SIZE + 1]);*/
-
-    // std::cout << "superblock: " << tag << std::endl;
-    return CnC::CNC_Success;
-}
-
-void SmithWatermanStep::put(SmithWatermanContext &ctx, int i, int j) const {
-    if (i <= ctx.n && j <= ctx.m) {
-        ctx.tags.put(std::make_pair(i, j));
+    for(int i = tag.first; i < tag.first + CHUNK_SIZE; i++) {
+        for(int j = tag.second; j < tag.second + CHUNK_SIZE; j++) {
+            do_step(i,j, ctx);
+        }
     }
+     */
+
+    //Version without puts
+    int mem[CHUNK_SIZE + 1][CHUNK_SIZE + 1];
+
+    int inI = tag.first - 1;
+    int inJ = tag.second - 1;
+    int outI = tag.first + CHUNK_SIZE;
+    int outJ = tag.second + CHUNK_SIZE;
+
+     ctx.items.get(std::make_pair(inI, inJ), mem[0][0]);
+
+    for(int i = 1; i <= CHUNK_SIZE; i++) {
+        ctx.items.get(std::make_pair(inI + i, inJ), mem[i][0]);
+    }
+
+    for(int j = 1; j <= CHUNK_SIZE; j++) {
+        ctx.items.get(std::make_pair(inI, inJ + j), mem[0][j]);
+    }
+
+    for(int i = 1; i <= CHUNK_SIZE; i++) {
+        for (int j = 1; j <= CHUNK_SIZE; j++) {
+
+            int up = mem[i][j - 1];
+            int di = mem[i - 1][j];
+            int le = mem[i-1][j-1];
+
+            int diagScore = di + get_score(ctx.a[inI + i - 1], ctx.b[inJ + j - 1]);
+            int topColScore = le + get_score(ctx.a[inI + i - 1], 0);
+            int leftRowScore = up + get_score(0, ctx.b[inJ + j - 1]);
+
+            mem[i][j] = std::max(diagScore, std::max(leftRowScore, topColScore));
+        }
+    }
+
+    for(int i = 1; i < CHUNK_SIZE; i++) {
+        ctx.items.put(std::make_pair(inI + i, outJ), mem[i][CHUNK_SIZE]);
+        ctx.tags.put(std::make_pair(inI + i, outJ));
+    }
+
+    for(int j = 1; j < CHUNK_SIZE; j++) {
+        ctx.items.put(std::make_pair(outI, inJ + j), mem[CHUNK_SIZE][j]);
+        ctx.tags.put(std::make_pair(outI, inJ + j));
+    }
+
+    ctx.tags.put(std::make_pair(outI, outJ));
+    ctx.items.put(std::make_pair(outI, outJ), mem[CHUNK_SIZE][CHUNK_SIZE]);
+
+    return CnC::CNC_Success;
 }
 
 
 
 int main() {
-    std::string a = "TACGACCTGTTACACCTGGTACCTTACGGT";
-    std::string b = "TAGATATAGGAGGGATATTTAGAGAGGAGAAGGATAGAGGGATTT";
+    std::string a = "TAGTAG";
+    std::string b = "TAATCTAATC";
 
     SmithWatermanContext ctx(a, b);
 

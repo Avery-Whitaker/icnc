@@ -110,8 +110,8 @@ void SmithWatermanStep::put(SmithWatermanContext &ctx, int i, int j) const {
 
 
 int main() {
-    std::string a = "TACGACCTGTTACACCTGGTACCTTACGGT";
-    std::string b = "TAGATATAGGAGGGATATTTAGAGAGGAGAAGGATAGAGGGATTT";
+    std::string a = "TAGTAG";
+    std::string b = "TAATCTAATC";
 
     SmithWatermanContext ctx(a, b);
 
