@@ -1,8 +1,11 @@
 //
-// Created by Srdan Milakovic on 4/27/18.
+// Created by Avery Whitaker on 4/28/18.
 //
 
 #include <cnc/cnc.h>
+#define CHUNK_SIZE 7
+
+struct superblock_manager;
 
 typedef std::pair<int, int> Tag_t;
 typedef int ItemValue_t;
@@ -46,6 +49,38 @@ struct SmithWatermanStep {
     void put(SmithWatermanContext &ctx, int i, int j) const ;
 };
 
+struct superblock_manager : CnC::tag_collection< int >::callback_type
+{
+    CnC::step_collection<SmithWatermanStep> m_sstep;
+    CnC::tag_collection<int> m_stags;
+    SmithWatermanContext &context;
+
+    superblock_manager(SmithWatermanContext &context) : context(context), m_sstep(context, "sstep"), m_stags(context, "stags") {
+        m_stags.prescribes(m_sstep, context);
+        m_sstep.consumes(context.m_fibs);
+        m_sstep.produces(context.m_fibs);
+    }
+
+    virtual bool on_put( const int & tag) override {
+        if(tag >= CHUNK_SIZE && tag < context.n - context.n % CHUNK_SIZE) {
+            if( tag % CHUNK_SIZE == 0) {
+                // std::cout << "do chunk tag" << tag << std::endl;
+                m_stags.put(tag);
+            }
+            //std::cout << "dont exec tag" << tag << std::endl;
+            return true;
+        }
+        // std::cout << "do exec tag" << tag << std::endl;
+        return false;
+    }
+};
+
+struct SuperSmithWatermanStep
+{
+    int execute(const int tag, fib_context &ctx) const;
+};
+
+
 struct SmithWatermanContext : public CnC::context<SmithWatermanContext> {
     CnC::step_collection<SmithWatermanStep> steps;
     CnC::item_collection<Tag_t, ItemValue_t> items;
@@ -57,14 +92,21 @@ struct SmithWatermanContext : public CnC::context<SmithWatermanContext> {
     std::string a;
     std::string b;
 
+    superblock_manager *m_super_manager;
+
     SmithWatermanContext(std::string a, std::string b)
             : CnC::context<SmithWatermanContext>(), steps(*this), items(*this), tags(*this), a(a), b(b) {
+
+        m_super_manager = new superblock_manager(*this);
+        tags.on_put(m_super_manager);
+
         tags.prescribes(steps, *this);
         steps.consumes(items);
         steps.produces(items);
 
         n = a.length();
         m = b.length();
+
     }
 };
 
@@ -98,6 +140,22 @@ int SmithWatermanStep::execute(const Tag_t &t, SmithWatermanContext &ctx) const 
 
     put(ctx, i + 1, j + 1);
 
+    return CnC::CNC_Success;
+}
+
+int SuperSmithWatermanStep::execute(const int tag, fib_context &ctx) const
+{
+    /* fib_type mem[CHUNK_SIZE + 3];
+     ctx.m_fibs.get(tag - 2, mem[0]);
+     ctx.m_fibs.get(tag - 1, mem[1]);
+
+     for(int i = 2; i < CHUNK_SIZE + 2; i++)
+         mem[i] = mem[i-1] + mem[i-2];
+
+     ctx.m_fibs.put(tag + CHUNK_SIZE - 2, mem[CHUNK_SIZE]);
+     ctx.m_fibs.put(tag + CHUNK_SIZE - 1, mem[CHUNK_SIZE + 1]);*/
+
+    // std::cout << "superblock: " << tag << std::endl;
     return CnC::CNC_Success;
 }
 

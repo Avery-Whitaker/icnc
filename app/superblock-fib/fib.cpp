@@ -27,6 +27,7 @@
 
 // compute fibonacci numbers
 //
+// Superblock version by Avery Whitaker 4/27/2018
 
 #define _CRT_SECURE_NO_DEPRECATE // to keep the VS compiler happy with TBB
 
@@ -60,7 +61,7 @@ int main( int argc, char* argv[] )
     } else n = atol( argv[1] );
 
     // create context
-    fib_context ctxt;
+    fib_context ctxt(n);
 
     // put tags to initiate evaluation
     for( int i = 0; i <= n; ++i ) ctxt.m_tags.put( i );
