@@ -2,7 +2,6 @@
 // Created by Srdan Milakovic on 4/27/18.
 //
 
-
 #include <cnc/cnc.h>
 
 typedef std::pair<int, int> Tag_t;
@@ -14,64 +13,30 @@ int M[5][5] = {{-8, -2, -2, -2, -2},
              {-4,  2,  2,  5,  2},
              {-4,  2,  2,  2,  5}};
 
+int char_to_idx(char c) {
+    switch (c) {
+        case '_':
+        case 0:
+            return 0;
+        case 'A':
+        case 'a':
+            return 1;
+        case 'C':
+        case 'c':
+            return 2;
+        case 'G':
+        case 'g':
+            return 3;
+        case 'T':
+        case 't':
+            return 4;
+    }
+    CNC_ASSERT(false);
+}
+
 int get_score(char a, char b)
 {
-    int A = 0;
-    int B = 0;
-
-    switch (a) {
-        case '_':
-        case 0:
-            A = 0;
-            break;
-        case 'A':
-        case 'a':
-            A = 1;
-            break;
-        case 'C':
-        case 'c':
-            A = 2;
-            break;
-        case 'G':
-        case 'g':
-            A = 3;
-            break;
-        case 'T':
-        case 't':
-            A = 4;
-            break;
-        default:
-            CNC_ASSERT(false);
-            break;
-    }
-
-    switch (b) {
-        case '_':
-        case 0:
-            B = 0;
-            break;
-        case 'A':
-        case 'a':
-            B = 1;
-            break;
-        case 'C':
-        case 'c':
-            B = 2;
-            break;
-        case 'G':
-        case 'g':
-            B = 3;
-            break;
-        case 'T':
-        case 't':
-            B = 4;
-            break;
-        default:
-            CNC_ASSERT(false);
-            break;
-    }
-
-    return M[A][B];
+    return M[char_to_idx(a)][char_to_idx(b)];
 }
 
 struct SmithWatermanContext;
@@ -112,19 +77,18 @@ int SmithWatermanStep::execute(const Tag_t &t, SmithWatermanContext &ctx) const 
     int di = 0;
     int le = 0;
 
-    ctx.items.get(std::make_pair(i - 1, j), up);
-    ctx.items.get(std::make_pair(i, j - 1), le);
+    ctx.items.get(std::make_pair(i, j - 1), up);
+    ctx.items.get(std::make_pair(i - 1, j), le);
     ctx.items.get(std::make_pair(i - 1, j - 1), di);
 
-    int diagScore = di + get_score(ctx.a[i], ctx.b[j]);
-    int topColScore = le + get_score(ctx.a[i], 0);
-    int leftRowScore = up + get_score(0, ctx.b[j]);
+    int diagScore = di + get_score(ctx.a[i - 1], ctx.b[j - 1]);
+    int topColScore = le + get_score(ctx.a[i - 1], 0);
+    int leftRowScore = up + get_score(0, ctx.b[j - 1]);
 
     int res = std::max(diagScore, std::max(leftRowScore, topColScore));
     ctx.items.put(std::make_pair(i,j), res);
 
-    //printf("%2d\t%2d\t%2d\t%d+%d\t%d+%d\t%d+%d\n", i, j, res, up, get_score(0, ctx.b[j]), di, get_score(ctx.a[i], ctx.b[j]), le, get_score(ctx.a[i], 0));
-    printf("%2d %2d %2d %3d %3d %3d %3d %3d %3d\n", i, j, res, up, di, le, get_score(0, ctx.b[j]), get_score(ctx.a[i], ctx.b[j]), get_score(ctx.a[i], 0));
+    //printf("%2d %2d %c %c %2d %3d %3d %3d\n", i, j, ctx.a[i - 1], ctx.b[j - 1], res, topColScore, diagScore, leftRowScore);
 
     if (i == 1) {
         put(ctx, 1, j + 1);
@@ -148,22 +112,31 @@ void SmithWatermanStep::put(SmithWatermanContext &ctx, int i, int j) const {
 
 
 int main() {
-    std::string a = "TACGGT";
-    std::string b = "ACCT";
+    std::string a = "TACGACCTGTTACACCTGGTACCTTACGGT";
+    std::string b = "TAGATATAGGAGGGATATTTAGAGAGGAGAAGGATAGAGGGATTT";
+
+    //should be 81
 
     SmithWatermanContext ctx(a, b);
 
     ctx.items.put(std::make_pair(0, 0), 0);
+
     for (int i = 1; i <= a.length(); i++) {
         ctx.items.put(std::make_pair(i, 0), -4 * i);
     }
+
     for (int i = 1; i <= b.length(); i++) {
         ctx.items.put(std::make_pair(0, i), -2 * i);
     }
 
     ctx.tags.put(std::make_pair(1, 1));
-
     ctx.wait();
+
+    int sol;
+
+    ctx.items.get(std::make_pair(a.length(),b.length()), sol);
+
+    printf("sol is %d\n", sol);
 
     return 0;
 }
