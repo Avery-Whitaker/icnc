@@ -3,7 +3,7 @@
 //
 
 #include <cnc/cnc.h>
-#define CHUNK_SIZE 2
+#define CHUNK_SIZE 16
 
 struct superblock_manager;
 
@@ -90,13 +90,10 @@ struct superblock_manager : CnC::tag_collection< Tag_t >::callback_type
 
             if( tag.first % CHUNK_SIZE == 0 &&
                     tag.second % CHUNK_SIZE == 0) {
-                 std::cout << "do chunk tag" << "(" << tag.first << ", " << tag.second << ")" << std::endl;
-                m_stags.put(tag);
+                 m_stags.put(tag);
             }
-             std::cout << "dont exec tag" << "(" << tag.first << ", " << tag.second << ")" << std::endl;
             return true;
         }
-         std::cout << "do exec tag "  << "(" << tag.first << ", " << tag.second << ")" <<  std::endl;
         return false;
     }
 };
@@ -130,25 +127,14 @@ int do_step(int i, int j, SmithWatermanContext &ctx) {
     ctx.items.get(std::make_pair(i - 1, j), le);
     ctx.items.get(std::make_pair(i - 1, j - 1), di);
 
-    int diagScore = di + get_score(ctx.a[i - 1], ctx.b[j - 1]);
-    int topColScore = le + get_score(ctx.a[i - 1], 0);
-    int leftRowScore = up + get_score(0, ctx.b[j - 1]);
+    const int diagScore = di + get_score(ctx.a[i - 1], ctx.b[j - 1]);
+    const int topColScore = le + get_score(ctx.a[i - 1], 0);
+    const int leftRowScore = up + get_score(0, ctx.b[j - 1]);
 
-    int res = std::max(diagScore, std::max(leftRowScore, topColScore));
+    const int res = std::max(diagScore, std::max(leftRowScore, topColScore));
     ctx.items.put(std::make_pair(i,j), res);
 
     //printf("%2d %2d %c %c %2d %3d %3d %3d\n", i, j, ctx.a[i - 1], ctx.b[j - 1], res, topColScore, diagScore, leftRowScore);
-
-    if (i == 1) {
-        put(ctx, 1, j + 1);
-    }
-
-    if (j == 1) {
-        put(ctx, i + 1, 1);
-    }
-
-    put(ctx, i + 1, j + 1);
-
 }
 
 int SmithWatermanStep::execute(const Tag_t &t, SmithWatermanContext &ctx) const {
@@ -162,7 +148,6 @@ int SmithWatermanStep::execute(const Tag_t &t, SmithWatermanContext &ctx) const 
 
 int SuperSmithWatermanStep::execute(const Tag_t tag, SmithWatermanContext &ctx) const
 {
-
     /* Simple version
 
     for(int i = tag.first; i < tag.first + CHUNK_SIZE; i++) {
@@ -175,12 +160,12 @@ int SuperSmithWatermanStep::execute(const Tag_t tag, SmithWatermanContext &ctx) 
     //Version without puts
     int mem[CHUNK_SIZE + 1][CHUNK_SIZE + 1];
 
-    int inI = tag.first - 1;
-    int inJ = tag.second - 1;
-    int outI = tag.first + CHUNK_SIZE;
-    int outJ = tag.second + CHUNK_SIZE;
+    const int inI = tag.first - 1;
+    const int inJ = tag.second - 1;
+    const int outI = tag.first + CHUNK_SIZE - 1;
+    const int outJ = tag.second + CHUNK_SIZE - 1;
 
-     ctx.items.get(std::make_pair(inI, inJ), mem[0][0]);
+    ctx.items.get(std::make_pair(inI, inJ), mem[0][0]);
 
     for(int i = 1; i <= CHUNK_SIZE; i++) {
         ctx.items.get(std::make_pair(inI + i, inJ), mem[i][0]);
@@ -193,13 +178,13 @@ int SuperSmithWatermanStep::execute(const Tag_t tag, SmithWatermanContext &ctx) 
     for(int i = 1; i <= CHUNK_SIZE; i++) {
         for (int j = 1; j <= CHUNK_SIZE; j++) {
 
-            int up = mem[i][j - 1];
-            int di = mem[i - 1][j];
-            int le = mem[i-1][j-1];
+            const int up = mem[i][j - 1];
+            const int di = mem[i - 1][j - 1];
+            const int le = mem[i-1][j];
 
-            int diagScore = di + get_score(ctx.a[inI + i - 1], ctx.b[inJ + j - 1]);
-            int topColScore = le + get_score(ctx.a[inI + i - 1], 0);
-            int leftRowScore = up + get_score(0, ctx.b[inJ + j - 1]);
+            const int diagScore = di + get_score(ctx.a[inI + i - 1], ctx.b[inJ + j - 1]);
+            const int topColScore = le + get_score(ctx.a[inI + i - 1], 0);
+            const int leftRowScore = up + get_score(0, ctx.b[inJ + j - 1]);
 
             mem[i][j] = std::max(diagScore, std::max(leftRowScore, topColScore));
         }
@@ -207,25 +192,20 @@ int SuperSmithWatermanStep::execute(const Tag_t tag, SmithWatermanContext &ctx) 
 
     for(int i = 1; i < CHUNK_SIZE; i++) {
         ctx.items.put(std::make_pair(inI + i, outJ), mem[i][CHUNK_SIZE]);
-        ctx.tags.put(std::make_pair(inI + i, outJ));
     }
 
     for(int j = 1; j < CHUNK_SIZE; j++) {
         ctx.items.put(std::make_pair(outI, inJ + j), mem[CHUNK_SIZE][j]);
-        ctx.tags.put(std::make_pair(outI, inJ + j));
     }
 
-    ctx.tags.put(std::make_pair(outI, outJ));
     ctx.items.put(std::make_pair(outI, outJ), mem[CHUNK_SIZE][CHUNK_SIZE]);
 
     return CnC::CNC_Success;
 }
 
-
-
 int main() {
-    std::string a = "TAGTAG";
-    std::string b = "TAATCTAATC";
+    std::string a = "TAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACA";
+    std::string b = "TAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAGTAGAAGGAGAGTAGAGATAGACGACCCTAGCGATCAGATACGATACACACGATTACGGTACACAGGTACATAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATCTAATCTAATAGACAGATACGGTACAACTCCTAGCCATCAATATC";
 
     SmithWatermanContext ctx(a, b);
 
@@ -239,14 +219,18 @@ int main() {
         ctx.items.put(std::make_pair(0, i), -2 * i);
     }
 
-    ctx.tags.put(std::make_pair(1, 1));
+    for (int i = 1; i <= a.length(); i++) {
+        for (int j = 1; j <= b.length(); j++) {
+            ctx.tags.put(std::make_pair(i, j));
+        }
+    }
+
     ctx.wait();
 
     int sol;
 
     ctx.items.get(std::make_pair(a.length(),b.length()), sol);
 
-    //should be 81
     printf("sol is %d\n", sol);
 
     return 0;
