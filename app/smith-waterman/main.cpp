@@ -51,11 +51,9 @@ struct SmithWatermanContext : public CnC::context<SmithWatermanContext> {
     CnC::item_collection<Tag_t, ItemValue_t> items;
     CnC::tag_collection<Tag_t> tags;
 
-    size_t n;
-    size_t m;
+    size_t n, m;
 
-    std::string a;
-    std::string b;
+    std::string a, b;
 
     SmithWatermanContext(std::string a, std::string b)
             : CnC::context<SmithWatermanContext>(), steps(*this), items(*this), tags(*this), a(a), b(b) {

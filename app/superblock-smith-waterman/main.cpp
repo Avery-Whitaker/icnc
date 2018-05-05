@@ -5,6 +5,8 @@
 #include <cnc/cnc.h>
 #define CHUNK_SIZE 16
 
+//#define NO_INNER_PUTS
+
 struct superblock_manager;
 
 typedef std::pair<int, int> Tag_t;
@@ -114,6 +116,7 @@ SmithWatermanContext::SmithWatermanContext(std::string a, std::string b)
 }
 
 void put(SmithWatermanContext &ctx, int i, int j) {
+
     if (i <= ctx.n && j <= ctx.m) {
         ctx.tags.put(std::make_pair(i, j));
     }
@@ -148,15 +151,7 @@ int SmithWatermanStep::execute(const Tag_t &t, SmithWatermanContext &ctx) const 
 
 int SuperSmithWatermanStep::execute(const Tag_t tag, SmithWatermanContext &ctx) const
 {
-    /* Simple version
-
-    for(int i = tag.first; i < tag.first + CHUNK_SIZE; i++) {
-        for(int j = tag.second; j < tag.second + CHUNK_SIZE; j++) {
-            do_step(i,j, ctx);
-        }
-    }
-     */
-
+#ifdef NO_INNER_PUTS
     //Version without puts
     int mem[CHUNK_SIZE + 1][CHUNK_SIZE + 1];
 
@@ -199,6 +194,13 @@ int SuperSmithWatermanStep::execute(const Tag_t tag, SmithWatermanContext &ctx) 
     }
 
     ctx.items.put(std::make_pair(outI, outJ), mem[CHUNK_SIZE][CHUNK_SIZE]);
+#else
+    for(int i = tag.first; i < tag.first + CHUNK_SIZE; i++) {
+        for(int j = tag.second; j < tag.second + CHUNK_SIZE; j++) {
+            do_step(i,j, ctx);
+        }
+    }
+#endif
 
     return CnC::CNC_Success;
 }
