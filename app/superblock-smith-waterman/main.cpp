@@ -3,7 +3,7 @@
 //
 
 #include <cnc/cnc.h>
-#define CHUNK_SIZE 16
+//#define CHUNK_SIZE 16
 
 //#define NO_INNER_PUTS
 
@@ -122,7 +122,9 @@ void put(SmithWatermanContext &ctx, int i, int j) {
     }
 }
 
-int do_step(int i, int j, SmithWatermanContext &ctx) {
+int SmithWatermanStep::execute(const Tag_t &t, SmithWatermanContext &ctx) const {
+    int const &i = t.first;
+    int const &j = t.second;
 
     int up, di, le;
 
@@ -137,21 +139,11 @@ int do_step(int i, int j, SmithWatermanContext &ctx) {
     const int res = std::max(diagScore, std::max(leftRowScore, topColScore));
     ctx.items.put(std::make_pair(i,j), res);
 
-    //printf("%2d %2d %c %c %2d %3d %3d %3d\n", i, j, ctx.a[i - 1], ctx.b[j - 1], res, topColScore, diagScore, leftRowScore);
-}
-
-int SmithWatermanStep::execute(const Tag_t &t, SmithWatermanContext &ctx) const {
-    int const &i = t.first;
-    int const &j = t.second;
-
-    do_step(i,j, ctx);
-
     return CnC::CNC_Success;
 }
 
 int SuperSmithWatermanStep::execute(const Tag_t tag, SmithWatermanContext &ctx) const
 {
-#ifdef NO_INNER_PUTS
     //Version without puts
     int mem[CHUNK_SIZE + 1][CHUNK_SIZE + 1];
 
@@ -185,6 +177,7 @@ int SuperSmithWatermanStep::execute(const Tag_t tag, SmithWatermanContext &ctx) 
         }
     }
 
+#ifdef NO_INNER_PUTS
     for(int i = 1; i < CHUNK_SIZE; i++) {
         ctx.items.put(std::make_pair(inI + i, outJ), mem[i][CHUNK_SIZE]);
     }
@@ -195,9 +188,9 @@ int SuperSmithWatermanStep::execute(const Tag_t tag, SmithWatermanContext &ctx) 
 
     ctx.items.put(std::make_pair(outI, outJ), mem[CHUNK_SIZE][CHUNK_SIZE]);
 #else
-    for(int i = tag.first; i < tag.first + CHUNK_SIZE; i++) {
-        for(int j = tag.second; j < tag.second + CHUNK_SIZE; j++) {
-            do_step(i,j, ctx);
+    for(int i = 1; i <= CHUNK_SIZE; i++) {
+        for(int j = 1; j <= CHUNK_SIZE; j++) {
+            ctx.items.put(std::make_pair(inI + i, inJ + j), mem[i][j]);
         }
     }
 #endif

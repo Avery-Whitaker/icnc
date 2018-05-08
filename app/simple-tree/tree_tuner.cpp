@@ -5,14 +5,6 @@ typedef unsigned long long node_type;
 
 struct tree_context;
 
-struct tree_tuner : public CnC::step_tuner<>
-{
-    int priority(const int tag, tree_context &ctx) const {
-        printf("P: %d\n", tag);
-        return tag;
-    }
-};
-
 struct tree_step
 {
     int execute(const int &t, tree_context &c) const;
@@ -20,7 +12,7 @@ struct tree_step
 
 struct tree_context : public CnC::context<tree_context>
 {
-    CnC::step_collection<tree_step, tree_tuner> m_steps;
+    CnC::step_collection<tree_step> m_steps;
     CnC::item_collection<int, node_type> m_nodes;
     CnC::tag_collection<int> m_tags;
 

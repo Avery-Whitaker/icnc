@@ -1,6 +1,8 @@
 #include <cnc/cnc.h>
 #include <cnc/debug.h>
 
+#define TREE_SIZE 50000000
+
 typedef unsigned long long node_type;
 
 struct tree_context;
@@ -30,8 +32,8 @@ struct tree_context : public CnC::context<tree_context>
 
 int tree_step::execute(const int &tag, tree_context &ctxt) const
 {
-    printf("%d\n", tag);
-    if (tag < 8) {
+    //printf("%d\n", tag);
+    if (tag < TREE_SIZE/2) {
         ctxt.m_tags.put(tag * 2);
         ctxt.m_tags.put(tag * 2 + 1);
     }

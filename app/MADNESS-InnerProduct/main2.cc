@@ -21,16 +21,7 @@
 #include "Quadrature.h"
 #include "tbb/concurrent_vector.h"
 
-
-// http://stackoverflow.com/questions/22387586/measuring-execution-time-of-a-function-in-c
-#include <chrono>
-
-// http://en.cppreference.com/w/cpp/thread/mutex
-// #include <atomic>
-
 using namespace std;
-// http://stackoverflow.com/questions/22387586/measuring-execution-time-of-a-function-in-c
-using namespace std::chrono;
 
 
 struct MADNESSCnCContext;
@@ -46,20 +37,6 @@ struct Compress {
 
 struct InnerProduct {
    int execute(const InnerProductInfo &node, MADNESSCnCContext &context) const;
-};
-
-struct project_tuner : public CnC::step_tuner<>
-{
-    bool preschedule() const { return true; }
-    int affinity(const TreeNodeInfo & tag, MADNESSCnCContext & arg) const {
-        puts("affinity");
-        printf("%d\n", tag.l);
-        return tag.l % 2; //TODO
-    }
-    int priority(const TreeNodeInfo & tag, MADNESSCnCContext & arg) const {
-        puts("priority");
-        return tag.l; //TODO
-    }
 };
 
 struct MADNESSCnCContext : public CnC::context<MADNESSCnCContext> {
@@ -91,7 +68,7 @@ struct MADNESSCnCContext : public CnC::context<MADNESSCnCContext> {
 
    // collections
    // step_collections
-   CnC::step_collection<Project, project_tuner> project_step;
+   CnC::step_collection<Project> project_step;
    CnC::step_collection<Compress> compress_step;
    CnC::step_collection<InnerProduct> innerProduct_step;
 
@@ -224,7 +201,7 @@ Vector Project::sValues(int nInput, int lInput, int l, MADNESSCnCContext &contex
 }
 
 int Project::execute(const TreeNodeInfo &node, MADNESSCnCContext &context) const {
-    printf("Project: tag %d, core %d\n", node.l, sched_getcpu());
+    //printf("Project: tag %d, core %d\n", node.l, sched_getcpu());
     Vector s0 = sValues(node.n + 1, 2 * node.l, node.t, context);
     Vector s1 = sValues(node.n + 1, 2 * node.l + 1, node.t, context);
 
@@ -234,7 +211,7 @@ int Project::execute(const TreeNodeInfo &node, MADNESSCnCContext &context) const
 
    // if the error is less than the threshhold or we have reached max_level
    if (d.normf(k, 2*k) < context.thresh ||  node.n >= context.max_level - 1) {
-
+printf("reached depth of %d\n", node.n);
       context.leaves.put(make_pair(node.t, make_pair(node.n + 1, node.l * 2)), Node(node.n + 1, node.l * 2, k, s0, Vector(), false));
       context.leaves.put(make_pair(node.t, make_pair(node.n + 1, node.l * 2 + 1)), Node(node.n + 1, node.l * 2 + 1, k, s1, Vector(), false));
 
@@ -258,15 +235,12 @@ int Project::execute(const TreeNodeInfo &node, MADNESSCnCContext &context) const
 
 int Compress::execute(const TreeNodeInfo &node, MADNESSCnCContext &context) const {
 
-    printf("Compress: tag %d, core %d\n", node.l, sched_getcpu());
+    //printf("Compress: tag %d, core %d\n", node.l, sched_getcpu());
    Node left;
    Node right;
    int k = context.k;
-  puts("A"); 
    context.leaves.get(make_pair(node.t, make_pair(node.n + 1, node.l * 2)), left);
-   puts("B");
    context.leaves.get(make_pair(node.t, make_pair(node.n + 1, node.l * 2 + 1)), right);
-   puts("C");
    
 
    Vector s(left.s | right.s);
@@ -378,15 +352,24 @@ int main(int argc, char* argv[]) {
 
    int k = 6;
    int npt = 20;
-   int max_level = atoi(argv[1]);
-   double thresh = atof(argv[2]);
-        
-   // just for now
-   const int N = 2;
+   //int max_level = atoi(argv[1]);
+   int max_level = 100000000;
+   //double thresh = atof(argv[2]);
+   double thresh = 0.000000000001;
 
-   high_resolution_clock::time_point t1 = high_resolution_clock::now();
+   int N = 1;
 
-   vector<double (*)(double)> functions{test1, test2};
+   //high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
+   vector<double (*)(double)> functions;
+
+   for(int i = 0; i < N; i++) {
+       if(drand48() > 0.5)
+           functions.push_back(test1);
+       else
+           functions.push_back(test2);
+   }
+
    // int k, double thresh, int max_level, int n, vector< double (*)(double)> functions
    //
 
@@ -399,9 +382,9 @@ int main(int argc, char* argv[]) {
    context.wait();
 
 	
-   high_resolution_clock::time_point t2 = high_resolution_clock::now();
-   auto duration = duration_cast<microseconds>( t2 - t1 ).count();
-   cout << duration/1000000.0 << endl;
+   //high_resolution_clock::time_point t2 = high_resolution_clock::now();
+   //auto duration = duration_cast<microseconds>( t2 - t1 ).count();
+   //cout << duration/1000000.0 << endl;
 
 }
 
